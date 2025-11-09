@@ -8,8 +8,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json())
 
-//Plate-Share-db
-//zw6Knl2EE1SQMxer
+ 
 
 const uri = `mongodb+srv://${process.env.db_name}:${process.env.db_password}@cluster0.aoofufm.mongodb.net/?appName=Cluster0`;
 
