@@ -107,6 +107,21 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/accept/:id',async(req,res)=>{
+         const id = req.params.id
+          const updatedFood = req.body
+        const email = req.query.donar_email;
+      const query = { _id: new ObjectId(id)};
+ 
+      const updateDoc = {
+        $set: {
+           status:updatedFood.status
+        },
+      };
+      const result = await orderCollection.updateOne(query,updateDoc);
+      res.send(result)
+    })
+
     app.get("/order-list", async (req, res) => {
       const email = req.query.donar_email;
       const foodId = req.query.foodId;
