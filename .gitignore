@@ -1,3 +1,4 @@
 node_modules
 .env
 .plate-share-ae51d-firebase-adminsdk-fbsvc-13c9a53dd9.json
+.vercel

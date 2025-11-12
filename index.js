@@ -1,10 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 
 const serviceAccount = require("./plate-share-ae51d-firebase-adminsdk-fbsvc-13c9a53dd9.json")
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-require("dotenv").config();
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -20,29 +21,7 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.db_name}:${process.env.db_password}@cluster0.aoofufm.mongodb.net/?appName=Cluster0`;
 
-
-const verifyToken = async (req, res, next) => {
-  const authorization = req.headers.authorization;
-  console.log(authorization)
-
-//   if (!authorization) {
-//     return res.status(401).send({
-//       message: "unauthorized access. Token not found!",
-//     });
-//   }
-
-//   const token = authorization.split(" ")[1];
-//   try {
-//     await admin.auth().verifyIdToken(token);
-
-//     next();
-//   } catch (error) {
-//     res.status(401).send({
-//       message: "unauthorized access.",
-//     });
-//   }
-next()
-};
+ 
 
 
 app.get("/", (req, res) => {
@@ -77,13 +56,18 @@ async function run() {
     });
 
     app.get("/latest-foods", async (req, res) => {
-      const cursor = foodCollection.find().sort({ created_at: -1 }).limit(6);
+        const status = req.query.status;
+      const query = {};
+      if (status) {
+        query.status = status;
+      }
+      const cursor = foodCollection.find(query).sort({food_quantity:-1}).limit(6);
       const result = await cursor.toArray();
       res.send(result);
       //for Home
     });
 
-    app.get("/foods/:id",verifyToken, async (req, res) => {
+    app.get("/foods/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodCollection.findOne(query);
