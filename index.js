@@ -23,23 +23,25 @@ const uri = `mongodb+srv://${process.env.db_name}:${process.env.db_password}@clu
 
 const verifyToken = async (req, res, next) => {
   const authorization = req.headers.authorization;
+  console.log(authorization)
 
-  if (!authorization) {
-    return res.status(401).send({
-      message: "unauthorized access. Token not found!",
-    });
-  }
+//   if (!authorization) {
+//     return res.status(401).send({
+//       message: "unauthorized access. Token not found!",
+//     });
+//   }
 
-  const token = authorization.split(" ")[1];
-  try {
-    await admin.auth().verifyIdToken(token);
+//   const token = authorization.split(" ")[1];
+//   try {
+//     await admin.auth().verifyIdToken(token);
 
-    next();
-  } catch (error) {
-    res.status(401).send({
-      message: "unauthorized access.",
-    });
-  }
+//     next();
+//   } catch (error) {
+//     res.status(401).send({
+//       message: "unauthorized access.",
+//     });
+//   }
+next()
 };
 
 
@@ -81,7 +83,7 @@ async function run() {
       //for Home
     });
 
-    app.get("/foods/:id", async (req, res) => {
+    app.get("/foods/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodCollection.findOne(query);
