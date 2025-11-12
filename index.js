@@ -1,14 +1,47 @@
 const express = require("express");
 const cors = require("cors");
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./plate-share-ae51d-firebase-adminsdk-fbsvc-13c9a53dd9.json")
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+;
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
 app.use(cors());
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.db_name}:${process.env.db_password}@cluster0.aoofufm.mongodb.net/?appName=Cluster0`;
+
+
+const verifyToken = async (req, res, next) => {
+  const authorization = req.headers.authorization;
+
+  if (!authorization) {
+    return res.status(401).send({
+      message: "unauthorized access. Token not found!",
+    });
+  }
+
+  const token = authorization.split(" ")[1];
+  try {
+    await admin.auth().verifyIdToken(token);
+
+    next();
+  } catch (error) {
+    res.status(401).send({
+      message: "unauthorized access.",
+    });
+  }
+};
+
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -32,7 +65,12 @@ async function run() {
     const orderCollection = db.collection("order");
 
     app.get("/foods", async (req, res) => {
-      const result = await foodCollection.find().toArray();
+      const status = req.query.status;
+      const query = {};
+      if (status) {
+        query.status = status;
+      }
+      const result = await foodCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -53,7 +91,7 @@ async function run() {
 
     app.get("/my-food", async (req, res) => {
       const email = req.query.email;
-      
+
       const query = {};
       if (email) {
         query.email = email;
@@ -62,10 +100,10 @@ async function run() {
       res.send(result);
     });
 
-     
     app.post("/foods", async (req, res) => {
       const data = req.body;
-      
+      data.food_quantity = Number(data.food_quantity)
+
       const result = await foodCollection.insertOne(data);
       res.send({
         success: true,
@@ -92,7 +130,7 @@ async function run() {
 
     app.patch("/foods/:id", async (req, res) => {
       const id = req.params.id;
-      const updatedFood = req.body
+      const updatedFood = req.body;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
@@ -107,20 +145,26 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/accept/:id',async(req,res)=>{
-         const id = req.params.id
-          const updatedFood = req.body
-        const email = req.query.donar_email;
-      const query = { _id: new ObjectId(id)};
- 
+    app.patch("/accept/:id", async (req, res) => {
+      const id = req.params.id;
+      const foodId = req.body.foodId;
+      const updatedFood = req.body;
+
+      const query = { _id: new ObjectId(id) };
+
       const updateDoc = {
         $set: {
-           status:updatedFood.status
+          status: updatedFood.status,
         },
       };
-      const result = await orderCollection.updateOne(query,updateDoc);
-      res.send(result)
-    })
+      const result = await orderCollection.updateOne(query, updateDoc);
+      const request = await foodCollection.updateOne(
+        { _id: new ObjectId(foodId) },
+        { $set: { status: "doneted" } }
+      );
+      console.log(request);
+      res.send(result, request);
+    });
 
     app.get("/order-list", async (req, res) => {
       const email = req.query.donar_email;
@@ -132,6 +176,16 @@ async function run() {
         query.foodId = foodId;
       }
       console.log(foodId);
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/my-request", async (req, res) => {
+      const email = req.query.email;  
+      const query = {};
+      if (email) query.user_email = email;
+
+      console.log(query);
       const result = await orderCollection.find(query).toArray();
       res.send(result);
     });
