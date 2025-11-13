@@ -3,26 +3,20 @@ const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./plate-share-ae51d-firebase-adminsdk-fbsvc-13c9a53dd9.json")
+const serviceAccount = require("./plate-share-ae51d-firebase-adminsdk-fbsvc-13c9a53dd9.json");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-;
-
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
 });
-
 
 app.use(cors());
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.db_name}:${process.env.db_password}@cluster0.aoofufm.mongodb.net/?appName=Cluster0`;
-
- 
-
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -56,12 +50,15 @@ async function run() {
     });
 
     app.get("/latest-foods", async (req, res) => {
-        const status = req.query.status;
+      const status = req.query.status;
       const query = {};
       if (status) {
         query.status = status;
       }
-      const cursor = foodCollection.find(query).sort({food_quantity:-1}).limit(6);
+      const cursor = foodCollection
+        .find(query)
+        .sort({ food_quantity: -1 })
+        .limit(6);
       const result = await cursor.toArray();
       res.send(result);
       //for Home
@@ -88,7 +85,7 @@ async function run() {
 
     app.post("/foods", async (req, res) => {
       const data = req.body;
-      data.food_quantity = Number(data.food_quantity)
+      data.food_quantity = Number(data.food_quantity);
 
       const result = await foodCollection.insertOne(data);
       res.send({
@@ -167,12 +164,38 @@ async function run() {
     });
 
     app.get("/my-request", async (req, res) => {
-      const email = req.query.email;  
+      const email = req.query.email;
       const query = {};
       if (email) query.user_email = email;
 
       console.log(query);
-      const result = await orderCollection.find(query).toArray();
+      const result = await orderCollection
+        .aggregate([
+          {
+            $match: query,
+          },
+
+          {
+            $lookup: {
+              from: "foods",
+
+              let: { objectId: { $toObjectId: "$foodId" } },
+
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ["$_id", "$$objectId"],
+                    },
+                  },
+                },
+              ],
+
+              as: "food",
+            },
+          },
+        ])
+        .toArray();
       res.send(result);
     });
 
